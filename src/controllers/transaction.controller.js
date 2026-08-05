@@ -1,35 +1,20 @@
-import { create } from "node:domain";
 import prisma from "../config/prisma.js";
 
 export const getHeaderTransactions = async (req, res) => {
     try {
         // Setting pagination dan sort untuk tampilan transactions
         const userId = req.user.id;
-        let where = {};
-        const { minTotalPrice, maxTotalPrice, createdAt, order, limit, sort, page } = req.query;
-
-        if (req.query === {}) {
-            const headerTransactionsOnly = await prisma.transactions.findMany({
-                where: { userId: userId },
-            });
-            return res.status(200).send({
-                message: "Transactions has been sent",
-                data: headerTransactionsOnly,
-            });
-        }
-
-        where = { userId };
+        const { minTotalPrice, maxTotalPrice, createdAt } = req.query;
+        const where = { userId };
 
         if (minTotalPrice) {
-            where = { ...where, minTotalPrice };
+            where.totalPrice = { ...where.totalPrice, gte: Number(minTotalPrice) };
         }
-
         if (maxTotalPrice) {
-            where = { ...where, maxTotalPrice };
+            where.totalPrice = { ...where.totalPrice, lte: Number(maxTotalPrice) };
         }
-
         if (createdAt) {
-            where = { ...where, createdAt };
+            where.createdAt = createdAt;
         }
 
         const transactionsQuery = await prisma.transactions.findMany({ where });
@@ -83,52 +68,28 @@ export const getDetailedTransactions = async (req, res) => {
             productId,
             minPrice,
             maxPrice,
-            minStock,
-            maxStock,
             minSubtotal,
             maxSubtotal,
-            order,
-            limit,
-            page,
-            sort,
         } = req.query;
 
-        if (req.query === {}) {
-            const detailedTransactions = await prisma.detailedTransactions.findMany({
-                where: { transactionId: params, userId: userId },
-            });
-            return res.status(200).send({
-                message: "Transactions has been sent",
-                data: detailedTransactions,
-            });
-        }
-
         if (productId) {
-            conditions = { productId };
+            conditions = { productId: Number(productId) };
         }
 
         if (minPrice) {
-            conditions = { ...conditions, minPrice };
+            conditions.price = { ...conditions.price, gte: Number(minPrice) };
         }
 
         if (maxPrice) {
-            conditions = { ...conditions, maxPrice };
-        }
-
-        if (minStock) {
-            conditions = { ...conditions, minStock };
-        }
-
-        if (maxStock) {
-            conditions = { ...conditions, maxStock };
+            conditions.price = { ...conditions.price, lte: Number(maxPrice) };
         }
 
         if (minSubtotal) {
-            conditions = { ...conditions, minSubtotal };
+            conditions.subtotal = { ...conditions.subtotal, gte: Number(minSubtotal) };
         }
 
         if (maxSubtotal) {
-            conditions = { ...conditions, maxSubtotal };
+            conditions.subtotal = { ...conditions.subtotal, lte: Number(maxSubtotal) };
         }
 
         const finalWhere = {
@@ -156,8 +117,9 @@ export const addTransactions = async (req, res) => {
     try {
         const userId = req.user.id;
         const { createdAt } = req.body || {};
+        let parsedDate;
         if (createdAt) {
-            const parsedDate = new Date(createdAt);
+            parsedDate = new Date(createdAt);
             if (isNaN(parsedDate.getTime())) {
                 return res.status(400).send("Invalid format of date");
             }
@@ -165,7 +127,7 @@ export const addTransactions = async (req, res) => {
         await prisma.transactions.create({
             data: {
                 userId: userId,
-                createdAt: createdAt,
+                createdAt: parsedDate,
             },
         });
         return res.status(201).send({
@@ -190,6 +152,15 @@ export const addDetailedTransactions = async (req, res) => {
             });
         }
         const { productId, quantity } = req.body;
+
+        const findTransaction = await prisma.transactions.findFirst({
+            where: { id: params, userId: userId },
+        });
+        if (!findTransaction) {
+            return res.status(404).send({
+                message: "Transaction not found",
+            });
+        }
 
         data = {
             transactionId: params,
@@ -243,19 +214,13 @@ export const addDetailedTransactions = async (req, res) => {
                 where: { id: productId },
                 data: { stock: freshProduct.stock - quantity },
             });
-            const totalPriceTransactions = await tx.transactions.findFirst({
-                where: { id: params },
-            });
             await tx.detailedTransactions.create({ data });
-            const sumSubtotal = await tx.detailedTransactions.aggregate({
-                where: { transactionId: params, userId: userId },
-                _sum: {
-                    subtotal: true,
-                },
+            const currentHeader = await tx.transactions.findFirst({
+                where: { id: params, userId: userId },
             });
             await tx.transactions.update({
                 where: { id: params },
-                data: { totalPrice: totalPriceTransactions.totalPrice + sumSubtotal._sum.subtotal },
+                data: { totalPrice: (currentHeader.totalPrice ?? 0) + data.subtotal },
             });
         });
         return res.status(201).send({
@@ -401,18 +366,15 @@ export const updateDetailedTransactions = async (req, res) => {
                 where: { id: params, userId: userId, transactionId: transId },
                 data,
             });
-            const totalPriceTransactions = await tx.transactions.findFirst({
-                where: { id: transId },
-            });
             const sumSubtotal = await tx.detailedTransactions.aggregate({
-                where: { transactionId: params, userId: userId },
+                where: { transactionId: transId, userId: userId },
                 _sum: {
                     subtotal: true,
                 },
             });
             await tx.transactions.updateMany({
-                where: { id: params, userId: userId },
-                data: { totalPrice: totalPriceTransactions.totalPrice + sumSubtotal._sum.subtotal },
+                where: { id: transId, userId: userId },
+                data: { totalPrice: sumSubtotal._sum.subtotal ?? 0 },
             });
         });
 
@@ -511,10 +473,6 @@ export const deleteDetailedTransactions = async (req, res) => {
                 data: { stock: freshProduct.stock + difference },
             });
 
-            const totalPriceTransactions = await tx.transactions.findFirst({
-                where: { id: transId },
-            });
-
             await tx.detailedTransactions.deleteMany({
                 where: { id: params, userId: userId, transactionId: transId },
             });
@@ -528,7 +486,7 @@ export const deleteDetailedTransactions = async (req, res) => {
 
             await tx.transactions.updateMany({
                 where: { id: transId, userId: userId },
-                data: { totalPrice: totalPriceTransactions.totalPrice - sumSubtotal._sum.subtotal },
+                data: { totalPrice: sumSubtotal._sum.subtotal ?? 0 },
             });
         });
 

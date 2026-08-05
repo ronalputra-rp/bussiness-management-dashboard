@@ -9,7 +9,7 @@ import {
     updateDetailedTransactions,
     deleteAllTransactions,
     deleteDetailedTransactions,
-} from "../controllers/transaction.controller";
+} from "../controllers/transaction.controller.js";
 
 const router = express.Router();
 

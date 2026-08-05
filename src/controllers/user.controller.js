@@ -58,7 +58,7 @@ export const updateUser = async (req, res) => {
                 });
             }
             const hashPassword = await bcrypt.hash(password, 12);
-            data = { ...data, password };
+            data = { ...data, password: hashPassword };
         }
         const findUser = await prisma.user.update({
             where: { id: req.user.id },
@@ -77,17 +77,22 @@ export const updateUser = async (req, res) => {
 
 export const deleteUser = async (req, res) => {
     try {
+        const userId = req.user.id;
         const checkingData = await prisma.user.findUnique({
-            where: { id: req.user.id },
+            where: { id: userId },
         });
         if (!checkingData) {
             return res.status(404).send({
                 message: "Users not found",
             });
         }
-        const deletingUser = await prisma.user.delete({
-            where: { id: req.user.id },
-        });
+        await prisma.$transaction([
+            prisma.detailedTransactions.deleteMany({ where: { userId: userId } }),
+            prisma.transactions.deleteMany({ where: { userId: userId } }),
+            prisma.products.deleteMany({ where: { userId: userId } }),
+            prisma.category.deleteMany({ where: { userId: userId } }),
+            prisma.user.delete({ where: { id: userId } }),
+        ]);
         return res.status(200).send({
             message: "Users succesfully deleted, please login again",
         });

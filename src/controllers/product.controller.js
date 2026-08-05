@@ -218,7 +218,7 @@ export const updateProduct = async (req, res) => {
                 where: { id: convertId },
             });
             if (!validateCategoryId) {
-                return res.status.send(404).send({
+                return res.status(404).send({
                     message: "Category not found",
                 });
             }
