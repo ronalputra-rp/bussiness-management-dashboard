@@ -1,17 +1,16 @@
-import axios from "axios";
 import api from "./api";
 
 export const getUser = async () => {
-    const { data } = await api.get("/user/profile");
+    const { data } = await api.get("/user");
     return data;
 };
 
-export const updateUser = async () => {
-    const { data } = await api.patch("/user/change-profile");
+export const updateUser = async (body) => {
+    const { data } = await api.patch("/user", body);
     return data;
 };
 
 export const deleteUser = async () => {
-    const { data } = await api.delete("/user/delete-profile");
+    const { data } = await api.delete("/user");
     return data;
 };

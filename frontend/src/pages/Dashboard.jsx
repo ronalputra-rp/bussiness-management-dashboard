@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import DashboardComponent from "../components/DashboardComponent";
-import dashboard from "../services/dashboardService";
+import { dashboard } from "../services/dashboardService";
 
 function DashboardPage() {
     const [dataDashboard,setData] = useState();
@@ -17,3 +17,5 @@ function DashboardPage() {
         <DashboardComponent data={dataDashboard}/>
     )
 }
+
+export default DashboardPage;

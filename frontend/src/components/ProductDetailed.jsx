@@ -1,108 +1,58 @@
 import { useState } from "react";
 import { updatingProduct } from "../services/productService";
-import { EditableRoot, EditableArea, EditablePreview, EditableInput } from "@inline-edit/react";
 
 function ProductDetailedComponents({ data }) {
+    const [isEdit, setEdit] = useState(false);
+    const [nameValue, setName] = useState(data.name);
+    const [descriptionValue, setDescription] = useState(data.description);
+    const [stockValue, setStock] = useState(data.stock);
+    const [priceValue, setPrice] = useState(data.price);
+
+    async function handleUpdate(event) {
+        event.preventDefault();
+        await updatingProduct(data.id, {
+            name: nameValue,
+            description: descriptionValue,
+            stock: Number(stockValue),
+            price: Number(priceValue),
+        });
+    }
+
     return (
         <section id="products-detailed-field">
             <section>
                 <p>Nama Produk : {data.name}</p>
-                <EditableRoot
-                    defaultValue={String(data.name)}
-                    activationMode="dblclick"
-                    submitMode="both"
-                    onSubmit={(val) => updatingProduct(data.id, { name: val })}
-                >
-                    <EditableArea>
-                        <EditablePreview />
-                        <EditableInput />
-                    </EditableArea>
-                </EditableRoot>
             </section>
-            <section>
-                <p>Kategori : {data.categoryId}</p>
-                <EditableRoot
-                    defaultValue={data.categoryId}
-                    activationMode="dblclick"
-                    submitMode="both"
-                    onSubmit={(val) => updatingProduct(data.id, { NumbcategoryId: Number(val) })}
-                >
-                    <EditableArea>
-                        <EditablePreview />
-                        <EditableInput />
-                    </EditableArea>
-                </EditableRoot>
-            </section>
-            <section>
-                <p>Deskripsi Produk : {data.description}</p>
-                <EditableRoot
-                    defaultValue={String(data.description)}
-                    activationMode="dblclick"
-                    submitMode="both"
-                    onSubmit={(val) => updatingProduct(data.id, { description: val })}
-                >
-                    <EditableArea>
-                        <EditablePreview />
-                        <EditableInput />
-                    </EditableArea>
-                </EditableRoot>
-            </section>
-            <section>
-                <p>Stok : {data.stock}</p>
-                <EditableRoot
-                    defaultValue={data.stock}
-                    activationMode="dblclick"
-                    submitMode="both"
-                    onSubmit={(val) => updatingProduct(data.id, { stock: Number(val) })}
-                >
-                    <EditableArea>
-                        <EditablePreview />
-                        <EditableInput />
-                    </EditableArea>
-                </EditableRoot>
-            </section>
-            <section>
-                <p>Harga : {data.price}</p>
-                <EditableRoot
-                    defaultValue={data.price}
-                    activationMode="dblclick"
-                    submitMode="both"
-                    onSubmit={(val) => updatingProduct(data.id, { price: Number(val) })}
-                >
-                    <EditableArea>
-                        <EditablePreview />
-                        <EditableInput />
-                    </EditableArea>
-                </EditableRoot>
-            </section>
-            <section>
-                <p>Dibuat pada : {data.createdAt}</p>
-                <EditableRoot
-                    defaultValue={data.createdAt}
-                    activationMode="dblclick"
-                    submitMode="both"
-                    onSubmit={(val) => updatingProduct(data.id, { createdAt: val })}
-                >
-                    <EditableArea>
-                        <EditablePreview />
-                        <EditableInput />
-                    </EditableArea>
-                </EditableRoot>
-            </section>
-            <section>
-                <p>Diubah pada : {data.updatedAt}</p>
-                <EditableRoot
-                    defaultValue={data.updatedAt}
-                    activationMode="dblclick"
-                    submitMode="both"
-                    onSubmit={(val) => updatingProduct(data.id, { updatedAt: val })}
-                >
-                    <EditableArea>
-                        <EditablePreview />
-                        <EditableInput />
-                    </EditableArea>
-                </EditableRoot>
-            </section>
+            <section>Kategori : {data.category?.category ?? data.categoryId}</section>
+            <section>Deskripsi Produk : {data.description}</section>
+            <section>Stok : {data.stock}</section>
+            <section>Harga : {data.price}</section>
+            <button type="button" id="edit-product-button" onClick={() => setEdit(!isEdit)}>
+                Edit Produk
+            </button>
+            {isEdit && (
+                <form action="" method="post" id="update-product" onSubmit={handleUpdate}>
+                    <section id="form-name">
+                        <label htmlFor="name">Nama Produk : </label>
+                        <input type="text" name="name" value={nameValue} onChange={(e) => setName(e.target.value)} id="name-product-input" />
+                    </section>
+                    <section id="form-description">
+                        <label htmlFor="description">Deskripsi Produk : </label>
+                        <input type="text" name="description" value={descriptionValue} onChange={(e) => setDescription(e.target.value)} id="description-product-input" />
+                    </section>
+                    <section id="form-stock">
+                        <label htmlFor="stock">Stok : </label>
+                        <input type="number" name="stock" value={stockValue} onChange={(e) => setStock(e.target.value)} id="stock-product-input" />
+                    </section>
+                    <section id="form-price">
+                        <label htmlFor="price">Harga : </label>
+                        <input type="number" name="price" value={priceValue} onChange={(e) => setPrice(e.target.value)} id="price-product-input" />
+                    </section>
+                    <button type="submit" id="save-product-button">Save</button>
+                </form>
+            )}
         </section>
     );
 }
+
+export default ProductDetailedComponents;
